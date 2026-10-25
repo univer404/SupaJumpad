@@ -13,7 +13,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerJumpEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
@@ -81,10 +81,13 @@ public final class SupaJumpad extends JavaPlugin implements Listener {
     }
 
     @EventHandler
-    public void onJump(PlayerJumpEvent event) {
+    public void onJump(PlayerMoveEvent event) {
+        if (event.getTo() == null || event.getFrom().getY() == event.getTo().getY()) {
+            return;
+        }
         Player player = event.getPlayer();
-        if (player.getGameMode() == GameMode.CREATIVE || !isAllowedWorld(player.getWorld())
-                || flightEnabled.contains(player.getUniqueId())) {
+        if (player.getVelocity().getY() <= 0 || player.getGameMode() == GameMode.CREATIVE
+                || !isAllowedWorld(player.getWorld()) || flightEnabled.contains(player.getUniqueId())) {
             return;
         }
 
