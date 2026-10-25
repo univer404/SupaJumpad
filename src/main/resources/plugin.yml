@@ -1,0 +1,15 @@
+name: SupaJumpad
+version: 1.0.0
+main: com.supajumpad.SupaJumpad
+api-version: '1.21'
+author: univer404
+description: Spawn and AFK flight controls.
+commands:
+  fly:
+    description: Toggle personal flight in configured worlds.
+    usage: /fly
+    permission: fly.use
+permissions:
+  fly.use:
+    description: Allows toggling flight in allowed worlds.
+    default: op
