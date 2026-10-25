@@ -30,6 +30,10 @@ public final class SupaJumpad extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        for (String uuid : getConfig().getStringList("enabled-players")) {
+            try { flightEnabled.add(UUID.fromString(uuid)); }
+            catch (IllegalArgumentException ignored) { getLogger().warning("Ignoring invalid UUID in enabled-players: " + uuid); }
+        }
         getServer().getPluginManager().registerEvents(this, this);
         getCommand("fly").setExecutor((sender, command, label, args) -> handleFlyCommand(sender));
         getLogger().info("SupaJumpad enabled.");
@@ -37,6 +41,7 @@ public final class SupaJumpad extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        saveFlightPlayers();
         for (Player player : getServer().getOnlinePlayers()) {
             if (!player.getGameMode().equals(GameMode.CREATIVE)
                     && !player.getGameMode().equals(GameMode.SPECTATOR)
@@ -115,6 +120,7 @@ public final class SupaJumpad extends JavaPlugin implements Listener {
         if (event.getNewGameMode() == GameMode.CREATIVE
                 || event.getNewGameMode() == GameMode.SPECTATOR) {
             flightEnabled.remove(event.getPlayer().getUniqueId());
+            saveFlightPlayers();
         }
     }
 
@@ -125,6 +131,7 @@ public final class SupaJumpad extends JavaPlugin implements Listener {
             if (flightEnabled.contains(player.getUniqueId())) {
                 if (!player.hasPermission("fly.use")) {
                     flightEnabled.remove(player.getUniqueId());
+                    saveFlightPlayers();
                     player.setAllowFlight(false);
                 } else {
                     player.setAllowFlight(true);
@@ -154,11 +161,12 @@ public final class SupaJumpad extends JavaPlugin implements Listener {
             return true;
         }
         if (!isAllowedWorld(player.getWorld())) {
-            send(player, "<red>Flight can only be toggled in the spawn or afk world.</red>");
+            send(player, "&cFlight can only be toggled in the spawn or afk world.");
             return true;
         }
         UUID uuid = player.getUniqueId();
         if (flightEnabled.remove(uuid)) {
+            saveFlightPlayers();
             player.setFlying(false);
             player.setAllowFlight(false);
             String message = getConfig().getString("messages.disabled", "<##A8A8A8>Flying disabled.");
@@ -166,12 +174,18 @@ public final class SupaJumpad extends JavaPlugin implements Listener {
             sendActionBar(player, message);
         } else {
             flightEnabled.add(uuid);
+            saveFlightPlayers();
             player.setAllowFlight(true);
             String message = getConfig().getString("messages.enabled", "<##A8A8A8>Flying enabled.");
             send(player, message);
             sendActionBar(player, message);
         }
         return true;
+    }
+
+    private void saveFlightPlayers() {
+        getConfig().set("enabled-players", flightEnabled.stream().map(UUID::toString).toList());
+        saveConfig();
     }
 
     private boolean isAllowedWorld(World world) {
