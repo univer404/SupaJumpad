@@ -31,6 +31,7 @@ public final class SupaJumpad extends JavaPlugin implements Listener {
     public void onEnable() {
         saveDefaultConfig();
         getServer().getPluginManager().registerEvents(this, this);
+        getCommand("fly").setExecutor((sender, command, label, args) -> handleFlyCommand(sender));
         getLogger().info("SupaJumpad enabled.");
     }
 
@@ -140,48 +141,37 @@ public final class SupaJumpad extends JavaPlugin implements Listener {
         }
     }
 
-    @org.bukkit.event.EventHandler
-    public void onFlyCommand(org.bukkit.event.player.PlayerCommandPreprocessEvent event) {
-        // The registered /fly command is handled by the executor below.
-    }
-
-    @Override
-    public void onLoad() {
-        getCommand("fly").setExecutor((sender, command, label, args) -> {
-            if (!(sender instanceof Player player)) {
-                sender.sendMessage("This command can only be used by a player.");
-                return true;
-            }
-            if (!player.hasPermission("fly.use")) {
-                send(player, getConfig().getString("messages.no-permission",
-                        "&cYou don't have permission to use this."));
-                sendActionBar(player, getConfig().getString("messages.no-permission",
-                        "&cYou don't have permission to use this."));
-                return true;
-            }
-            if (!isAllowedWorld(player.getWorld())) {
-                send(player, "<red>Flight can only be toggled in the spawn or afk world.</red>");
-                return true;
-            }
-
-            UUID uuid = player.getUniqueId();
-            if (flightEnabled.remove(uuid)) {
-                player.setFlying(false);
-                player.setAllowFlight(false);
-                send(player, getConfig().getString("messages.disabled",
-                        "<##A8A8A8>Flying disabled."));
-                sendActionBar(player, getConfig().getString("messages.disabled",
-                        "<##A8A8A8>Flying disabled."));
-            } else {
-                flightEnabled.add(uuid);
-                player.setAllowFlight(true);
-                send(player, getConfig().getString("messages.enabled",
-                        "<##A8A8A8>Flying enabled."));
-                sendActionBar(player, getConfig().getString("messages.enabled",
-                        "<##A8A8A8>Flying enabled."));
-            }
+    private boolean handleFlyCommand(org.bukkit.command.CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("This command can only be used by a player.");
             return true;
-        });
+        }
+        if (!player.hasPermission("fly.use")) {
+            String message = getConfig().getString("messages.no-permission",
+                    "&cYou don't have permission to use this.");
+            send(player, message);
+            sendActionBar(player, message);
+            return true;
+        }
+        if (!isAllowedWorld(player.getWorld())) {
+            send(player, "<red>Flight can only be toggled in the spawn or afk world.</red>");
+            return true;
+        }
+        UUID uuid = player.getUniqueId();
+        if (flightEnabled.remove(uuid)) {
+            player.setFlying(false);
+            player.setAllowFlight(false);
+            String message = getConfig().getString("messages.disabled", "<##A8A8A8>Flying disabled.");
+            send(player, message);
+            sendActionBar(player, message);
+        } else {
+            flightEnabled.add(uuid);
+            player.setAllowFlight(true);
+            String message = getConfig().getString("messages.enabled", "<##A8A8A8>Flying enabled.");
+            send(player, message);
+            sendActionBar(player, message);
+        }
+        return true;
     }
 
     private boolean isAllowedWorld(World world) {
@@ -204,18 +194,16 @@ public final class SupaJumpad extends JavaPlugin implements Listener {
     }
 
     private Component parse(String input) {
-        String converted = input.replaceAll("<##([A-Fa-f0-9]{6})>", "§x§$1");
-        // Expand legacy hex sequences into Minecraft's §x§R§R§G§G§B§B format.
         java.util.regex.Matcher matcher = java.util.regex.Pattern
-                .compile("§x§([A-Fa-f0-9]{6})").matcher(converted);
+                .compile("<##([A-Fa-f0-9]{6})>").matcher(input);
         StringBuffer expanded = new StringBuffer();
         while (matcher.find()) {
-            String hex = matcher.group(1);
             StringBuilder legacyHex = new StringBuilder("§x");
-            for (char c : hex.toCharArray()) {
-                legacyHex.append('§').append(c);
+            for (char character : matcher.group(1).toCharArray()) {
+                legacyHex.append('§').append(character);
             }
-            matcher.appendReplacement(expanded, java.util.regex.Matcher.quoteReplacement(legacyHex.toString()));
+            matcher.appendReplacement(expanded,
+                    java.util.regex.Matcher.quoteReplacement(legacyHex.toString()));
         }
         matcher.appendTail(expanded);
         return legacy.deserialize(expanded.toString()).decoration(TextDecoration.ITALIC, false);
