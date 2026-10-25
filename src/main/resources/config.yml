@@ -1,0 +1,9 @@
+# Players can use the /fly toggle and protected jump behavior in these worlds.
+allowed-worlds:
+  - spawn
+  - afk
+
+messages:
+  no-permission: "&cYou don't have permission to use this."
+  enabled: "<##A8A8A8>Flying enabled."
+  disabled: "<##A8A8A8>Flying disabled."
